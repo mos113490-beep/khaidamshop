@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nextplay Store - Realtime System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>body { font-family: 'Kanit', sans-serif; background-color: #f8fafc; }</style>
+</head>
+<body>
+<div id="app" class="pb-20">
+
+    <div class="bg-gray-800 text-white p-2 flex justify-center space-x-4 text-sm">
+        <button @click="view = 'customer'" :class="view === 'customer' ? 'text-sky-400 font-bold' : ''">🌐 หน้าลูกค้า</button>
+        <button @click="view = 'admin'" :class="view === 'admin' ? 'text-sky-400 font-bold' : ''">🔐 หน้าแอดมิน</button>
+    </div>
+
+    <div v-if="view === 'customer'">
+        <nav class="bg-white shadow-sm p-4 text-center">
+            <h1 class="text-2xl font-bold text-sky-500 italic">NEXTPLAY STORE</h1>
+        </nav>
+
+        <div class="max-w-6xl mx-auto p-6">
+            <h2 class="text-xl font-bold mb-6 border-l-4 border-sky-500 pl-3">สินค้าทั้งหมด</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div v-for="item in products" :key="item.id" class="bg-white rounded-2xl shadow-md overflow-hidden border border-gray-100">
+                    <div class="relative">
+                        <img :src="item.img" class="w-full h-48 object-cover" onerror="this.src='https://via.placeholder.com/300?text=No+Image'">
+                        <span class="absolute top-2 right-2 px-3 py-1 rounded-full text-xs font-bold shadow-sm" 
+                              :class="item.status === 'พร้อมขาย' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'">
+                            {{ item.status }}
+                        </span>
+                    </div>
+                    <div class="p-4 text-center">
+                        <h3 class="font-bold text-gray-800 text-lg">{{ item.name }}</h3>
+                        <p class="text-sky-500 font-bold text-2xl my-2">{{ item.price }} ฿</p>
+                        <button @click="showPayment = true" class="w-full bg-sky-500 text-white py-2 rounded-xl font-bold hover:bg-sky-600 transition">สั่งซื้อตอนนี้</button>
+                    </div>
+                </div>
+            </div>
+
+            <div v-if="showPayment" class="mt-12 bg-white p-8 rounded-3xl shadow-2xl border-2 border-sky-100">
+                <h3 class="text-2xl font-bold text-center mb-8">ช่องทางการชำระเงิน</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
+                    <img src="https://i.postimg.cc/85zK0X8L/1000016197.jpg" class="mx-auto w-72 rounded-2xl shadow-lg border-4 border-white">
+                    <div class="space-y-4">
+                        <div class="bg-orange-50 p-5 rounded-2xl border-l-8 border-orange-500">
+                            <p class="font-bold text-orange-600">TrueMoney Wallet</p>
+                            <p class="text-2xl font-mono">096-817-7154</p>
+                        </div>
+                        <div class="bg-green-50 p-5 rounded-2xl border-l-8 border-green-500">
+                            <p class="font-bold text-green-600">ธนาคารกสิกรไทย</p>
+                            <p class="text-2xl font-mono">201-3-16151-0</p>
+                            <p class="text-sm">ชื่อบัญชี: ดนัยณัฏฐ์ พ่วงเรือ</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div v-if="view === 'admin'">
+        <div v-if="!isLoggedIn" class="min-h-screen flex items-center justify-center">
+             <div class="bg-white p-8 rounded-2xl shadow-xl w-96">
+                <h2 class="text-xl font-bold mb-4">ADMIN ACCESS</h2>
+                <input v-model="loginForm.user" type="text" placeholder="Username" class="w-full p-3 border rounded-lg mb-3">
+                <input v-model="loginForm.pass" type="password" placeholder="Password" class="w-full p-3 border rounded-lg mb-4">
+                <button @click="checkLogin" class="w-full bg-gray-800 text-white py-3 rounded-lg font-bold">เข้าสู่ระบบ</button>
+             </div>
+        </div>
+
+        <div v-else class="max-w-6xl mx-auto p-6">
+            <h2 class="text-2xl font-bold mb-6 text-gray-800">จัดการระบบหลังบ้าน</h2>
+            
+            <div class="bg-white p-6 rounded-2xl shadow-sm mb-6 border-t-4 border-sky-400">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <input v-model="newItem.name" placeholder="ชื่อสินค้า" class="p-2 border rounded">
+                    <input v-model="newItem.price" type="number" placeholder="ราคา" class="p-2 border rounded">
+                    <input v-model="newItem.img" placeholder="ลิงก์รูปภาพ" class="p-2 border rounded">
+                    <button @click="addItem" class="bg-sky-500 text-white font-bold rounded">เพิ่มสินค้า</button>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow overflow-hidden">
+                <table class="w-full text-left">
+                    <thead class="bg-gray-50 font-bold">
+                        <tr>
+                            <th class="p-4">รูป</th>
+                            <th class="p-4">ชื่อ</th>
+                            <th class="p-4">สถานะ</th>
+                            <th class="p-4">จัดการ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="item in products" :key="item.id" class="border-t">
+                            <td class="p-4"><img :src="item.img" class="w-12 h-12 object-cover rounded"></td>
+                            <td class="p-4 font-medium">{{ item.name }}</td>
+                            <td class="p-4">
+                                <select v-on:change="updateStatus(item.id, $event.target.value)" class="p-1 border rounded bg-gray-50 text-sm">
+                                    <option :selected="item.status === 'พร้อมขาย'" value="พร้อมขาย">พร้อมขาย</option>
+                                    <option :selected="item.status === 'ขายแล้ว'" value="ขายแล้ว">ขายแล้ว</option>
+                                </select>
+                            </td>
+                            <td class="p-4">
+                                <button @click="deleteItem(item.id)" class="text-red-500 text-sm">ลบ</button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// --- ส่วนที่ต้องนำ Firebase Config ของคุณมาวาง ---
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT.firebaseapp.com",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_PROJECT.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId: "YOUR_APP_ID"
+};
+
+// เริ่มต้น Firebase
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+const { createApp } = Vue;
+createApp({
+    data() {
+        return {
+            view: 'customer',
+            isLoggedIn: false,
+            showPayment: false,
+            loginForm: { user: '', pass: '' },
+            newItem: { name: '', price: '', img: '', status: 'พร้อมขาย' },
+            products: []
+        }
+    },
+    mounted() {
+        // ดึงข้อมูล Real-time จาก Firebase
+        db.collection("game_items").onSnapshot((snapshot) => {
+            this.products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        });
+    },
+    methods: {
+        checkLogin() {
+            if(this.loginForm.user === 'danainat' && this.loginForm.pass === 'danainat') {
+                this.isLoggedIn = true;
+            } else { alert('รหัสผ่านไม่ถูกต้อง'); }
+        },
+        async addItem() {
+            if(this.newItem.name && this.newItem.price) {
+                await db.collection("game_items").add(this.newItem);
+                this.newItem = { name: '', price: '', img: '', status: 'พร้อมขาย' };
+                alert('เพิ่มสินค้าสำเร็จ!');
+            }
+        },
+        async updateStatus(id, newStatus) {
+            await db.collection("game_items").doc(id).update({ status: newStatus });
+        },
+        async deleteItem(id) {
+            if(confirm('ยืนยันการลบ?')) await db.collection("game_items").doc(id).delete();
+        }
+    }
+}).mount('#app');
+</script>
+</body>
+</html>
