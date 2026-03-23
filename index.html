@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>Khaidam Gamingshop</title>
+
+<style>
+body{
+margin:0;
+font-family:sans-serif;
+background-image:url("เมือง3dโทนสีม่วงพื้นเงา_202603240058.jpeg");
+background-size:cover;
+background-position:center;
+color:white;
+text-align:center;
+}
+
+.header{
+background:rgba(0,0,0,0.6);
+padding:20px;
+}
+
+.profile{
+width:100px;
+border-radius:50%;
+}
+
+.container{
+display:flex;
+justify-content:center;
+gap:40px;
+margin-top:40px;
+flex-wrap:wrap;
+}
+
+.card{
+background:rgba(0,0,0,0.7);
+padding:20px;
+border-radius:15px;
+width:250px;
+}
+
+.card img{
+width:100%;
+border-radius:10px;
+}
+
+button{
+margin-top:10px;
+padding:10px;
+border:none;
+background:#a100ff;
+color:white;
+border-radius:8px;
+cursor:pointer;
+}
+
+.qr{
+margin-top:40px;
+}
+</style>
+
+<script>
+function buy(item,price){
+alert("คุณเลือกซื้อ "+item+" ราคา "+price+" บาท\nกรุณาโอนเงินแล้วส่งสลิปให้แอดมิน");
+}
+</script>
+
+</head>
+
+<body>
+
+<div class="header">
+<img src="Screenshot_20260323_174823.jpg" class="profile">
+<h1>Khaidam Gamingshop</h1>
+<p>ร้านขายรหัสไก่ตัน Block Spin</p>
+</div>
+
+<div class="container">
+
+<div class="card">
+<img src="lv_0_20260324005216.jpg">
+<h2>ไก่ตันเงิน 1M</h2>
+<p>ราคา 60 บาท</p>
+<button onclick="buy('ไก่ตันเงิน 1M','60')">ซื้อ</button>
+</div>
+
+<div class="card">
+<img src="lv_0_20260324005321.jpg">
+<h2>ไก่ตันเงิน 100K</h2>
+<p>ราคา 10 บาท</p>
+<button onclick="buy('ไก่ตันเงิน 100K','10')">ซื้อ</button>
+</div>
+
+</div>
+
+<div class="qr">
+<h2>ช่องทางชำระเงิน</h2>
+<img src="004999204438773_20251021_133007.jpeg" width="200">
+<p>สแกน QR เพื่อชำระเงิน</p>
+</div>
+
+</body>
+</html>
