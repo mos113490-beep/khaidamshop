@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Khaidam Gamingshop - Plus Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Kanit', sans-serif; background-color: #f1f5f9; -webkit-tap-highlight-color: transparent; }
+        .aspect-square { aspect-ratio: 1 / 1; }
+        .status-pending { background-color: #fef3c7; color: #d97706; }
+        .status-processing { background-color: #e0f2fe; color: #0284c7; }
+        .status-success { background-color: #dcfce7; color: #16a34a; }
+        .status-failed { background-color: #fee2e2; color: #dc2626; }
+    </style>
+</head>
+<body class="pb-24">
+<div id="app">
+
+    <nav class="bg-white p-4 sticky top-0 z-[60] shadow-sm flex justify-between items-center">
+        <div class="flex items-center space-x-2" @dblclick="view = 'admin_login'"> 
+            <div class="w-8 h-8 bg-black rounded-lg flex items-center justify-center text-white font-bold italic shadow-lg">K</div>
+            <h1 class="font-bold text-gray-800 text-sm tracking-tight uppercase">Khaidam <span class="text-sky-500 font-black">Gamingshop</span></h1>
+        </div>
+        <div v-if="isLoggedIn" class="flex items-center space-x-3">
+            <button @click="view = 'history'" class="text-[10px] font-bold text-gray-400 bg-gray-50 px-3 py-2 rounded-full border">ประวัติสั่งซื้อ</button>
+            <button @click="logout" class="text-[10px] text-red-400 font-bold border border-red-100 px-2 py-1 rounded-lg">ออก</button>
+        </div>
+    </nav>
+
+    <div v-if="!isLoggedIn && view !== 'admin_login'" class="min-h-[80vh] flex items-center justify-center p-6 text-center">
+        <div class="bg-white p-8 rounded-[40px] shadow-2xl w-full max-w-sm border-t-8 border-sky-400">
+            <h2 class="font-bold text-xl mb-6 italic underline uppercase">Nextplay Store</h2>
+            <div class="space-y-4 text-left">
+                <input v-model="auth.user" placeholder="ชื่อผู้ใช้งาน" class="w-full p-4 bg-gray-50 border rounded-2xl outline-none text-sm">
+                <input v-model="auth.pass" type="password" placeholder="รหัสผ่าน" class="w-full p-4 bg-gray-50 border rounded-2xl outline-none text-sm">
+                <button @click="handleAuth" class="w-full bg-sky-500 text-white py-4 rounded-2xl font-bold shadow-lg shadow-sky-100">เข้าสู่หน้าร้าน</button>
+            </div>
+        </div>
+    </div>
+
+    <div v-if="isLoggedIn && view === 'home'" class="p-4 space-y-6">
+        <div class="bg-[#111827] rounded-[40px] p-8 text-white shadow-xl">
+            <h2 class="text-3xl font-black italic text-sky-400 uppercase tracking-tight">Khaidam Gamingshop</h2>
+            <p class="text-[11px] opacity-70 font-bold mt-1 uppercase tracking-widest">สวัสดีคุณ, {{ auth.user }}</p>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+            <div v-for="item in products" :key="item.id" class="bg-white rounded-[32px] overflow-hidden shadow-sm border border-gray-100 p-2.5">
+                <div class="aspect-square w-full rounded-[24px] overflow-hidden bg-gray-100">
+                    <img :src="item.img" class="w-full h-full object-cover">
+                </div>
+                <div class="mt-3 px-1 text-center">
+                    <h3 class="font-bold text-gray-800 text-[12px] truncate">{{ item.name }}</h3>
+                    <p class="text-[9px] text-gray-400 mt-1 line-clamp-2 leading-relaxed" v-if="item.desc">{{ item.desc }}</p>
+                    <p class="text-sky-500 font-black text-sm mt-2">{{ item.price }} ฿</p>
+                    <button @click="buy(item)" class="w-full mt-3 bg-black text-white py-2.5 rounded-xl font-bold text-[10px] active:scale-95 transition shadow-lg">สั่งซื้อไอดี</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div v-if="showPay" class="fixed inset-0 z-[1000] flex items-center justify-center p-6 bg-black/80 backdrop-blur-sm" @click.self="showPay = false">
+        <div class="bg-white w-full max-w-sm rounded-[40px] p-8 relative shadow-2xl text-center border-t-8 border-sky-400 animate-in zoom-in duration-200">
+            <button @click="showPay = false" class="absolute top-4 right-4 text-gray-300 text-3xl font-light p-2 active:scale-75 transition">✕</button>
+            <h3 class="font-bold text-gray-800 text-xl mb-6 italic underline">ชำระเงิน</h3>
+            <div class="bg-white p-2 rounded-3xl mb-6 shadow-sm border-2 border-gray-50">
+                <img :src="paymentQR" class="w-52 mx-auto rounded-2xl" onerror="this.src='https://via.placeholder.com/300?text=Scan+QR'">
+            </div>
+            <div class="space-y-3">
+                <div class="bg-[#FFF7ED] p-4 rounded-2xl border-l-4 border-[#F97316] flex justify-between items-center">
+                    <span class="text-[#9A3412] font-bold text-xs uppercase">Wallet</span>
+                    <span class="font-black text-gray-800">096-817-7154</span>
+                </div>
+                <div class="bg-[#F0FDF4] p-4 rounded-2xl border-l-4 border-[#22C55E] flex justify-between items-center">
+                    <span class="text-[#166534] font-bold text-xs uppercase">K-Bank</span>
+                    <span class="font-black text-gray-800">201-3-16151-0</span>
+                </div>
+            </div>
+            <p class="text-[9px] text-gray-400 font-bold mt-4 uppercase italic tracking-wider">ดนัยณัฏฐ์ พ่วงเรือ</p>
+            <button @click="confirmOrder" class="w-full mt-6 bg-green-500 text-white py-4 rounded-2xl font-bold shadow-lg active:scale-95 transition">แจ้งโอนเงินเรียบร้อย</button>
+        </div>
+    </div>
+
+    <div v-if="view === 'admin_panel'" class="p-4 space-y-6 animate-in slide-in-from-bottom">
+        <div class="bg-white p-6 rounded-[32px] shadow-xl border-t-8 border-red-500">
+            <h3 class="font-bold mb-4 flex justify-between items-center">
+                <span>➕ เพิ่มสินค้าใหม่</span>
+                <button @click="view = 'home'" class="text-[10px] text-blue-500 underline">ไปหน้าร้าน</button>
+            </h3>
+            <div class="space-y-4 text-left">
+                <input v-model="newItem.name" placeholder="ชื่อไอดี (เช่น ROV สกินครบ)" class="w-full p-3.5 border rounded-xl text-sm outline-none bg-gray-50">
+                
+                <textarea v-model="newItem.desc" placeholder="อธิบายสินค้า (เช่น เลเวลเท่าไหร่, มีสกินอะไรบ้าง, เงื่อนไข)" class="w-full p-3.5 border rounded-xl text-sm outline-none bg-gray-50 h-24"></textarea>
+                
+                <input v-model="newItem.price" type="number" placeholder="ราคา" class="w-full p-3.5 border rounded-xl text-sm outline-none bg-gray-50">
+                <label class="block w-full bg-gray-100 py-3.5 rounded-xl font-bold text-xs text-center cursor-pointer border border-dashed border-gray-300">
+                    📸 อัปโหลดรูปสินค้า (1:1)
+                    <input type="file" @change="uploadFile($event, 'newItemImg')" class="hidden" accept="image/*">
+                </label>
+                <div v-if="newItem.img" class="w-20 h-20 rounded-xl overflow-hidden border mx-auto">
+                    <img :src="newItem.img" class="w-full h-full object-cover">
+                </div>
+                <button @click="addProduct" class="w-full bg-green-500 text-white py-4 rounded-xl font-bold shadow-lg">บันทึกสินค้าลงร้าน</button>
+            </div>
+        </div>
+
+        <div class="bg-white p-6 rounded-[32px] shadow-xl border-t-8 border-sky-500 text-center">
+            <h3 class="font-bold mb-4 text-left">⚙️ จัดการคิวอาร์โค้ด</h3>
+            <label class="block w-full bg-sky-50 text-sky-600 py-3.5 rounded-xl font-bold text-xs text-center cursor-pointer border border-sky-100">
+                📂 เลือกไฟล์รูป QR Code ใหม่
+                <input type="file" @change="uploadFile($event, 'paymentQR')" class="hidden" accept="image/*">
+            </label>
+            <img v-if="paymentQR" :src="paymentQR" class="mt-4 w-32 mx-auto rounded-lg shadow-md border">
+        </div>
+
+        <div class="bg-white p-6 rounded-[32px] shadow-xl border-t-8 border-gray-800">
+            <h3 class="font-bold mb-4">📦 ออเดอร์ & ส่งข้อมูลไอดี</h3>
+            <div class="space-y-4">
+                <div v-for="order in orders" :key="order.id" class="bg-gray-50 p-4 rounded-2xl border">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-[10px] font-bold text-gray-400 uppercase italic">ID: {{ order.customer }}</span>
+                        <select v-model="order.status" class="text-[10px] font-bold p-1.5 rounded-lg outline-none shadow-sm" :class="getStatusClass(order.status)">
+                            <option>รอดำเนินการ</option>
+                            <option>กำลังดำเนินการ</option>
+                            <option>ดำเนินการสำเร็จ</option>
+                            <option>ดำเนินการไม่สำเร็จ</option>
+                        </select>
+                    </div>
+                    <textarea v-model="order.adminMsg" placeholder="พิมพ์แชทหาลูกค้า/ส่งรหัส..." class="w-full p-3 text-[11px] border rounded-xl outline-none h-16 bg-white"></textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div v-if="view === 'history'" class="p-4 space-y-4">
+        <h2 class="font-bold text-gray-800 flex justify-between items-center px-2">
+            <span>📜 ประวัติของฉัน</span>
+            <button @click="view = 'home'" class="text-sky-500 text-xs font-bold uppercase tracking-wider">Back</button>
+        </h2>
+        <div v-for="order in userOrders" :key="order.id" class="bg-white p-5 rounded-[32px] border border-gray-100 shadow-sm space-y-4">
+            <div class="flex justify-between items-center">
+                <span :class="'text-[10px] px-3 py-1 rounded-full font-bold ' + getStatusClass(order.status)">{{ order.status }}</span>
+                <span class="text-[9px] text-gray-400 uppercase tracking-tighter">{{ order.date }}</span>
+            </div>
+            <div class="flex items-center space-x-3">
+                <img :src="order.itemImg" class="w-10 h-10 rounded-xl object-cover">
+                <p class="text-[11px] font-bold text-gray-800 leading-tight">{{ order.itemName }}</p>
+            </div>
+            <div v-if="order.adminMsg" class="bg-sky-50 p-3.5 rounded-2xl border-l-4 border-sky-400 shadow-sm">
+                <p class="text-[9px] text-sky-600 font-bold mb-1 uppercase italic tracking-widest">Admin Message:</p>
+                <p class="text-[11px] text-gray-700 leading-relaxed">{{ order.adminMsg }}</p>
+            </div>
+        </div>
+    </div>
+
+    <div v-if="view === 'admin_login'" class="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center p-6">
+        <div class="bg-white p-10 rounded-[40px] w-full max-w-sm text-center">
+            <h2 class="font-black text-xl mb-8 italic underline text-red-600 uppercase tracking-widest">Admin Access</h2>
+            <input v-model="adminKey" type="password" placeholder="รหัสลับแอดมิน" class="w-full p-4 border rounded-2xl mb-4 text-center outline-none bg-gray-50 text-lg">
+            <button @click="checkAdmin" class="w-full bg-red-600 text-white py-4 rounded-2xl font-bold shadow-xl active:scale-95 transition">UNLOCKED</button>
+            <button @click="view = 'home'" class="text-gray-400 text-xs mt-6 block mx-auto underline">CANCEL</button>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    const { createApp } = Vue
+    createApp({
+        data() {
+            return {
+                view: 'home', isLoggedIn: false, showPay: false,
+                adminKey: '', auth: { user: '', pass: '' },
+                paymentQR: null,
+                selectedItem: null,
+                newItem: { name: '', desc: '', price: '', img: null },
+                products: [],
+                orders: []
+            }
+        },
+        computed: {
+            userOrders() { return this.orders.filter(o => o.customer === this.auth.user); }
+        },
+        methods: {
+            handleAuth() {
+                if(!this.auth.user || !this.auth.pass) return alert('กรุณากรอกข้อมูลให้ครบ');
+                this.isLoggedIn = true;
+            },
+            logout() { this.isLoggedIn = false; this.view = 'home'; this.auth = { user: '', pass: '' }; },
+            checkAdmin() {
+                if(this.adminKey === 'danainat') { this.view = 'admin_panel'; this.adminKey = ''; }
+                else { alert('รหัสแอดมินไม่ถูกต้อง!'); this.view = 'home'; }
+            },
+            buy(item) { this.selectedItem = item; this.showPay = true; },
+            confirmOrder() {
+                this.orders.unshift({
+                    id: Date.now(), customer: this.auth.user, itemName: this.selectedItem.name,
+                    itemImg: this.selectedItem.img, price: this.selectedItem.price,
+                    status: 'รอดำเนินการ', adminMsg: '', date: new Date().toLocaleTimeString('th-TH')
+                });
+                this.showPay = false; alert('แจ้งโอนเรียบร้อย! กรุณารอแอดมินส่งข้อมูลไอดีให้ในหน้าประวัติ');
+                this.view = 'history';
+            },
+            uploadFile(event, target) {
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => { 
+                        if(target === 'newItemImg') this.newItem.img = e.target.result; 
+                        if(target === 'paymentQR') { this.paymentQR = e.target.result; alert('อัปโหลดคิวอาร์สำเร็จ!'); }
+                    };
+                    reader.readAsDataURL(file);
+                }
+            },
+            addProduct() {
+                if(!this.newItem.name || !this.newItem.img) return alert('ใส่ชื่อและรูปสินค้าด้วยครับ');
+                this.products.unshift({ id: Date.now(), ...this.newItem });
+                this.newItem = { name: '', desc: '', price: '', img: null };
+                alert('เพิ่มไอดีลงหน้าร้านแล้ว!');
+                this.view = 'home';
+            },
+            getStatusClass(s) {
+                if(s === 'รอดำเนินการ') return 'status-pending';
+                if(s === 'กำลังดำเนินการ') return 'status-processing';
+                if(s === 'ดำเนินการสำเร็จ') return 'status-success';
+                if(s === 'ดำเนินการไม่สำเร็จ') return 'status-failed';
+                return '';
+            }
+        }
+    }).mount('#app')
+</script>
+</body>
+</html>
