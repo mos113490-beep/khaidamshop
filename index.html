@@ -1,0 +1,235 @@
+import React, { useState, useEffect } from 'react';
+import { User, ShoppingBag, MessageCircle, Image as ImageIcon, LogIn, LogOut, CheckCircle, Send, PlusCircle, Package, Copy, X, Upload } from 'lucide-react';
+
+export default function MonguGameStore() {
+  // --- 1. SETTINGS & MOCK DATA ---
+  const myAccount = { name: "ดนัยณัฏฐ์ พ่วงเรือ", wallet: "096-817-7154", kbank: "201-3-16151-0" };
+
+  const [user, setUser] = useState(null);
+  const [view, setView] = useState('home'); 
+  const [selectedProduct, setSelectedProduct] = useState(null); // สำหรับหน้าจ่ายเงิน
+  
+  const [products, setProducts] = useState([
+    { id: 1, title: 'ROV: Skin Legend 100+', price: 1500, stock: 3, desc: 'ไอดีสะอาด ไม่ติดเบอร์', img: 'https://placehold.co/600x400/orange/white?text=ROV+ID', creds: 'User: rov_pro1 | Pass: 123456' },
+    { id: 2, title: 'Free Fire: ชุดแรร์เยอะ', price: 850, stock: 1, desc: 'ไอดีไก่ตัน ชุดเพียบ', img: 'https://placehold.co/600x400/blue/white?text=FreeFire', creds: 'User: ff_99 | Pass: ff1234' }
+  ]);
+
+  const [orders, setOrders] = useState([]);
+  const [chats, setChats] = useState([{ id: 1, sender: 'admin', text: 'สวัสดีครับ โอนเงินแล้วส่งสลิปในนี้ได้เลย!', time: '12:00' }]);
+
+  // --- 2. AUTH SYSTEM ---
+  useEffect(() => {
+    const saved = localStorage.getItem('user_session');
+    if (saved) setUser(JSON.parse(saved));
+  }, []);
+
+  const login = () => {
+    const data = { id: 'u1', name: 'Member_01', role: 'admin' }; // จำลองเป็น Admin
+    setUser(data);
+    localStorage.setItem('user_session', JSON.stringify(data));
+  };
+
+  const logout = () => {
+    setUser(null);
+    localStorage.removeItem('user_session');
+    setView('home');
+  };
+
+  // --- 3. SHOPPING LOGIC ---
+  const handleBuyClick = (p) => {
+    if (!user) return alert('กรุณาเข้าสู่ระบบก่อนซื้อ');
+    setSelectedProduct(p);
+    setView('checkout');
+  };
+
+  const confirmPayment = () => {
+    // ตัดสต็อก
+    setProducts(products.map(p => p.id === selectedProduct.id ? { ...p, stock: p.stock - 1 } : p));
+    
+    // สร้าง Order
+    const newOrder = { 
+      orderId: 'ORD-' + Math.floor(Math.random() * 10000), 
+      ...selectedProduct, 
+      status: 'Pending', 
+      customer: user.name 
+    };
+    setOrders([newOrder, ...orders]);
+    
+    // แจ้งในแชทอัตโนมัติ
+    const msg = { id: Date.now(), sender: 'user', text: `📸 ส่งสลิปแจ้งชำระเงินสำหรับ: ${selectedProduct.title}`, time: 'เมื่อครู่' };
+    setChats([...chats, msg]);
+    
+    alert('บันทึกการสั่งซื้อ! กรุณาส่งสลิปในแชท');
+    setView('chat');
+  };
+
+  // --- 4. ADMIN ACTIONS ---
+  const adminApprove = (order) => {
+    setOrders(orders.map(o => o.orderId === order.orderId ? { ...o, status: 'Success' } : o));
+    const msg = { 
+      id: Date.now(), 
+      sender: 'admin', 
+      text: `✅ ชำระเงินถูกต้อง! รายการ: ${order.title}\nID/PASS: ${order.creds}`, 
+      time: 'เมื่อครู่' 
+    };
+    setChats([...chats, msg]);
+  };
+
+  return (
+    <div className="min-h-screen bg-black text-white font-sans selection:bg-orange-500">
+      {/* NAVBAR */}
+      <nav className="bg-[#0a0a0a]/80 backdrop-blur-md border-b border-white/10 p-4 sticky top-0 z-50 flex justify-between items-center">
+        <h1 className="text-2xl font-black italic text-orange-500 cursor-pointer" onClick={() => setView('home')}>MONGU CLONE</h1>
+        <div className="flex gap-4 items-center">
+          {user ? (
+            <>
+              <button onClick={() => setView('chat')} className="hover:text-orange-500"><MessageCircle size={22}/></button>
+              {user.role === 'admin' && <button onClick={() => setView('admin')} className="bg-orange-600 px-3 py-1 rounded text-xs font-bold">ADMIN</button>}
+              <button onClick={logout} className="text-gray-400"><LogOut size={20}/></button>
+            </>
+          ) : (
+            <button onClick={login} className="bg-orange-500 px-5 py-1.5 rounded-full font-bold text-sm shadow-lg shadow-orange-500/20">Login</button>
+          )}
+        </div>
+      </nav>
+
+      <main className="max-w-6xl mx-auto p-4 md:p-8">
+        
+        {/* VIEW: HOME */}
+        {view === 'home' && (
+          <div className="space-y-8">
+            <div className="bg-gradient-to-br from-orange-600 to-red-700 h-60 rounded-[2rem] flex items-center p-8 shadow-2xl">
+              <div>
+                <h2 className="text-4xl md:text-6xl font-black uppercase tracking-tighter leading-none">Best ID<br/>Game Store</h2>
+                <p className="mt-2 opacity-80 text-sm">ยินดีต้อนรับคุณ {user?.name || 'แขกผู้มีเกียรติ'}</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+              {products.map(p => (
+                <div key={p.id} className="bg-[#111] rounded-3xl border border-white/5 overflow-hidden group hover:border-orange-500 transition-all">
+                  <div className="relative">
+                    <img src={p.img} className="w-full aspect-square object-cover" />
+                    {p.stock <= 0 && <div className="absolute inset-0 bg-black/80 flex items-center justify-center font-bold text-red-500">SOLD OUT</div>}
+                  </div>
+                  <div className="p-4">
+                    <h4 className="font-bold truncate text-sm">{p.title}</h4>
+                    <p className="text-orange-500 font-black text-lg mt-1">฿{p.price}</p>
+                    <button 
+                      onClick={() => handleBuyClick(p)}
+                      disabled={p.stock <= 0}
+                      className="w-full mt-3 bg-white text-black py-2 rounded-xl text-xs font-bold hover:bg-orange-500 hover:text-white transition-all"
+                    >
+                      ซื้อตอนนี้
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* VIEW: CHECKOUT (ชำระเงิน) */}
+        {view === 'checkout' && selectedProduct && (
+          <div className="max-w-md mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4">
+            <div className="text-center">
+              <h2 className="text-2xl font-black text-orange-500">ชำระเงิน</h2>
+              <p className="text-gray-400 text-xs">รายการ: {selectedProduct.title}</p>
+            </div>
+
+            <div className="bg-[#111] rounded-3xl p-6 border border-white/5 space-y-6">
+              {/* TrueMoney */}
+              <div className="flex flex-col items-center">
+                <img src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=0968177154`} className="w-40 h-40 bg-white p-2 rounded-xl" />
+                <div className="mt-4 text-center">
+                   <p className="text-xs text-gray-400">TrueMoney / PromptPay</p>
+                   <p className="text-xl font-black text-white">{myAccount.wallet}</p>
+                   <p className="text-sm text-orange-500 font-bold">{myAccount.name}</p>
+                </div>
+              </div>
+              <div className="h-[1px] bg-white/5"></div>
+              {/* Kbank */}
+              <div className="text-center">
+                <p className="text-xs text-gray-400">กสิกรไทย (K-Bank)</p>
+                <p className="text-lg font-bold">{myAccount.kbank}</p>
+                <button onClick={() => {navigator.clipboard.writeText('2013161510'); alert('คัดลอกแล้ว')}} className="mt-2 text-[10px] bg-white/5 px-4 py-1 rounded-full border border-white/10 hover:bg-white/20">COPY NUMBER</button>
+              </div>
+            </div>
+
+            <button onClick={confirmPayment} className="w-full bg-orange-600 py-4 rounded-2xl font-black shadow-lg shadow-orange-600/20 hover:scale-[1.02] transition-transform">
+              โอนเงินแล้ว (แจ้งสลิปในแชท)
+            </button>
+          </div>
+        )}
+
+        {/* VIEW: CHAT (แจ้งสลิป/รับรหัส) */}
+        {view === 'chat' && (
+          <div className="max-w-2xl mx-auto h-[70vh] bg-[#0a0a0a] rounded-[2.5rem] border border-white/10 flex flex-col shadow-2xl overflow-hidden">
+            <div className="p-5 border-b border-white/5 bg-[#111] flex items-center gap-3">
+               <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center font-black">M</div>
+               <div>
+                 <p className="text-sm font-bold tracking-tight">MONGU SUPPORT</p>
+                 <p className="text-[10px] text-green-500 font-bold uppercase tracking-widest">Online</p>
+               </div>
+            </div>
+            <div className="flex-1 p-6 overflow-y-auto space-y-4">
+              {chats.map(m => (
+                <div key={m.id} className={`flex ${m.sender === 'admin' ? 'justify-start' : 'justify-end'}`}>
+                  <div className={`max-w-[80%] p-4 rounded-3xl text-sm ${m.sender === 'admin' ? 'bg-[#1a1a1a] rounded-tl-none border border-white/5' : 'bg-orange-600 rounded-tr-none shadow-lg shadow-orange-600/20'}`}>
+                    <pre className="whitespace-pre-wrap font-sans leading-relaxed">{m.text}</pre>
+                    <p className="text-[9px] mt-2 opacity-40">{m.time}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="p-4 bg-[#111] flex gap-2">
+              <button className="p-3 bg-white/5 rounded-2xl text-gray-400 hover:bg-white/10"><Upload size={20}/></button>
+              <input placeholder="ส่งสลิปหรือข้อความ..." className="flex-1 bg-black rounded-2xl px-4 text-sm border border-white/5 outline-none focus:border-orange-500" />
+              <button className="bg-orange-500 p-3 rounded-2xl hover:scale-110 transition-transform"><Send size={20}/></button>
+            </div>
+          </div>
+        )}
+
+        {/* VIEW: ADMIN (หลังบ้าน) */}
+        {view === 'admin' && (
+          <div className="grid md:grid-cols-2 gap-8 animate-in fade-in">
+             <div className="bg-[#111] p-8 rounded-[2rem] border border-white/5">
+                <h3 className="text-xl font-bold mb-6 flex items-center gap-2 text-orange-500"><PlusCircle/> ลงขายไอดีใหม่</h3>
+                <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); alert('สินค้าถูกเพิ่มแล้ว (Simulated)'); }}>
+                   <input placeholder="ชื่อไอดี/ชื่อเกม" className="w-full bg-black p-3 rounded-xl border border-white/10 outline-none focus:border-orange-500" />
+                   <div className="grid grid-cols-2 gap-4">
+                     <input type="number" placeholder="ราคา (฿)" className="w-full bg-black p-3 rounded-xl border border-white/10 outline-none focus:border-orange-500" />
+                     <input type="number" placeholder="สต็อก" className="w-full bg-black p-3 rounded-xl border border-white/10 outline-none focus:border-orange-500" />
+                   </div>
+                   <textarea placeholder="ID/PASS สำหรับส่งอัตโนมัติ" className="w-full bg-black p-3 rounded-xl border border-white/10 h-20 outline-none focus:border-orange-500"></textarea>
+                   <button className="w-full bg-orange-600 py-3 rounded-xl font-bold hover:bg-orange-700">ยืนยันลงขาย</button>
+                </form>
+             </div>
+
+             <div className="space-y-4">
+                <h3 className="text-xl font-bold mb-6 flex items-center gap-2 text-blue-500"><Package/> จัดการคำสั่งซื้อ</h3>
+                {orders.map(o => (
+                  <div key={o.orderId} className="bg-[#111] p-5 rounded-2xl border border-white/5 flex justify-between items-center group">
+                    <div>
+                      <p className="font-bold text-sm">{o.title}</p>
+                      <p className="text-[10px] text-gray-500">ID: {o.orderId} | ลูกค้า: {o.customer}</p>
+                      <span className={`text-[10px] font-bold ${o.status === 'Success' ? 'text-green-500' : 'text-yellow-500'}`}>{o.status}</span>
+                    </div>
+                    {o.status === 'Pending' && (
+                      <button onClick={() => adminApprove(o)} className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-xl text-xs font-bold transition-all">ส่งรหัส</button>
+                    )}
+                  </div>
+                ))}
+             </div>
+          </div>
+        )}
+
+      </main>
+      
+      {/* Footer Branding */}
+      <footer className="mt-20 text-center opacity-20 text-[10px] uppercase tracking-[0.5em] font-bold">
+        Mongu Game Center Clone &copy; 2024
+      </footer>
+    </div>
+  );
+}
